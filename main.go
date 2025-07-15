@@ -178,14 +178,14 @@ func loadConfig() Config {
 		log.Printf("Error finding home directory: %v", err)
 		return getDefaultConfig()
 	}
-	configPath := fmt.Sprintf("%s/tui-hub/config.json", homeDir)
+	configPath := filepath.Join(homeDir, ".config", "tui-hub", "config.json")
 
 	// Try to open config file
 	file, err := os.Open(configPath)
 	if err != nil {
 		// If not found, create default config and write it
 		defaultConfig := getDefaultConfig()
-		_ = os.MkdirAll(fmt.Sprintf("%s/tui-hub", homeDir), 0755)
+		_ = os.MkdirAll(fmt.Sprintf("%s/.config/tui-hub", homeDir), 0755)
 		out, err := os.Create(configPath)
 		if err != nil {
 			log.Printf("Error creating config.json: %v", err)
