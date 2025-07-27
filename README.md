@@ -6,7 +6,8 @@ Collection of terminal applications for productivity, development, and system ut
 
 ## Games
 
-Terminal games including puzzles, arcade-style games, and interactive entertainment. All playable directly in your terminal.
+A collection of terminal-based games built with Go and BubbleTea including Chess with full rule implementation, Snake with score tracking, Blackjack with card counting, Auto-battler with strategic gameplay, and Mini ASCII Roguelike with dungeon exploration and combat systems.
+
 ## Installation
 
 ```bash
