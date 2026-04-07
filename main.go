@@ -360,7 +360,7 @@ func (m *Launcher) launchGame(game GameEntry) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	tuiHubDir := filepath.Join(homeDir, "projects", "active", "daily_use", "tui-hub")
+	tuiHubDir := filepath.Join(homeDir, "projects", "active", "tui-suite", "tui-hub")
 
 	// Create the command
 	var cmd *exec.Cmd
