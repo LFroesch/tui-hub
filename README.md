@@ -1,5 +1,26 @@
 # TUI Hub (Apps + Games)
 
+## Quick Install
+
+Recommended (installs to `~/.local/bin`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/LFroesch/tui-hub/main/install.sh | bash
+```
+
+Or download a binary from [GitHub Releases](https://github.com/LFroesch/tui-hub/releases).
+
+Or build from source:
+
+```bash
+make install
+```
+
+Command:
+
+```bash
+tui-hub
+```
 ## Apps
 
 Collection of terminal applications for productivity, development, and system utilities. Browse file managers, text editors, system monitors, and other TUI tools.
