@@ -23,6 +23,7 @@ Command:
 ```bash
 tui-hub
 ```
+
 ## Apps
 
 Collection of terminal applications for productivity, development, and system utilities. Browse file managers, text editors, system monitors, and other TUI tools.
@@ -54,3 +55,7 @@ Or move to ~/.local/bin
 Config file: `~/.config/tui-hub/config.json`
 
 Auto-created on first run. Add apps/games in JSON format with name, description, command, and path.
+
+## License
+
+[AGPL-3.0](LICENSE)
