@@ -1,4 +1,6 @@
-# TUI Hub (Apps + Games)
+# TUI Hub
+
+Launcher for the `tui-suite` app set. `tui-hub` keeps the main view focused on apps you already have installed, while a separate page lets you browse and install the rest of the curated suite.
 
 ## Quick Install
 
@@ -12,6 +14,12 @@ curl -fsSL https://raw.githubusercontent.com/LFroesch/tui-hub/main/install.sh | 
 
 Or download a binary from [GitHub Releases](https://github.com/LFroesch/tui-hub/releases).
 
+Or install with Go:
+
+```bash
+go install github.com/LFroesch/tui-hub@latest
+```
+
 Or build from source:
 
 ```bash
@@ -22,43 +30,69 @@ Command:
 
 ```bash
 tui-hub
+tui-hub --version
 ```
 
-## Apps
+## What It Shows
 
-Collection of terminal applications for productivity, development, and system utilities. Browse file managers, text editors, system monitors, and other TUI tools.
+`tui-hub` ships with a built-in catalog of these suite apps:
 
-## Games
+- `runx`
+- `scout`
+- `portmon`
+- `backup-xd`
+- `seedbank`
+- `zap`
+- `bobdb`
+- `logdog`
+- `unrot`
+- `sb`
+- `dwight`
 
-A collection of terminal-based games built with Go and BubbleTea including Chess with full rule implementation, Snake with score tracking, Blackjack with card counting, Auto-battler with strategic gameplay, and Mini ASCII Roguelike with dungeon exploration and combat systems.
+The launcher itself is not listed in the catalog.
 
-## Installation
+## Pages
 
-```bash
-git clone <repository-url>
-cd tui-hub
-go build -o tui-hub main.go
-./tui-hub
-```
+### Installed
 
-Or move to ~/.local/bin
+Apps found on your `PATH`. This is the default page.
+
+- Launch apps with `enter`
+- See local version info when `<app> --version` is available
+- Press `r` to manually check the latest GitHub release
+- Press `u` to update an app when a newer release is found
+
+### Available
+
+Curated suite apps that are not currently installed.
+
+- Press `i` to install the selected app
+
+Install and update actions reuse each app's own `install.sh` release installer.
 
 ## Controls
 
-- **↑/↓**: Navigate
-- **Enter**: Launch
-- **←/→**: Switch menus  
-- **q**: Quit
+- `tab`, `1`, `2` - switch between Installed and Available
+- `j/k`, `up/down` - move selection
+- `enter` - launch selected installed app
+- `i` - install selected available app
+- `u` - update selected installed app when an update is available
+- `r` - manually check latest releases for installed apps
+- `q` - quit
 
 ## Configuration
 
 Config file: `~/.config/tui-hub/config.json`
 
-Auto-created on first run. Add apps/games in JSON format with name, description, command, and path.
+The config is minimal and user-state only. Right now it stores the last active page. The app catalog, repo metadata, install behavior, and descriptions are built into `tui-hub`.
 
-### Environment variables
+Unknown fields in an older config are ignored.
 
-- `TUI_HUB_DEMO=1` — when set, the launcher reappears after a child app exits (suitable for kiosks / web demos). Default behavior is to exit tui-hub when the launched app quits.
+## Notes
+
+- Version checks are manual only. `tui-hub` does not hit GitHub on startup.
+- Games are intentionally out of scope for this version and can come back later.
+- Future versions can grow into custom user-added app entries, but v1 stays curated and simple.
 
 ## License
 

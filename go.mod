@@ -1,4 +1,4 @@
-module tui-hub
+module github.com/LFroesch/tui-hub
 
 go 1.23.3
 
