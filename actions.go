@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,15 +17,37 @@ import (
 var versionPattern = regexp.MustCompile(`v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?`)
 
 func detectLocalVersion(binaryPath string) string {
-	out, err := exec.Command(binaryPath, "--version").CombinedOutput()
-	if err != nil {
-		return ""
+	for _, arg := range []string{"--version", "-version"} {
+		ctx, cancel := context.WithTimeout(context.Background(), 700*time.Millisecond)
+		out, err := exec.CommandContext(ctx, binaryPath, arg).CombinedOutput()
+		cancel()
+
+		if version := extractVersion(string(out)); version != "" {
+			return version
+		}
+		if err == nil {
+			continue
+		}
 	}
-	return extractVersion(string(out))
+	return ""
 }
 
 func extractVersion(raw string) string {
 	return versionPattern.FindString(raw)
+}
+
+func scanLocalVersionsCmd(apps []suiteApp) tea.Cmd {
+	return func() tea.Msg {
+		updated := make([]suiteApp, len(apps))
+		copy(updated, apps)
+		for i := range updated {
+			if !updated[i].Installed || updated[i].ResolvedPath == "" {
+				continue
+			}
+			updated[i].LocalVersion = detectLocalVersion(updated[i].ResolvedPath)
+		}
+		return localVersionsScannedMsg{apps: updated}
+	}
 }
 
 func checkVersionsCmd(apps []suiteApp) tea.Cmd {
@@ -61,7 +84,7 @@ func checkVersionsCmd(apps []suiteApp) tea.Cmd {
 	}
 }
 
-func installOrUpdateCmd(app suiteApp) tea.Cmd {
+func installOrUpdateCmd(app suiteApp, cfg config) tea.Cmd {
 	return func() tea.Msg {
 		cmd := exec.Command("sh", "-c", fmt.Sprintf("curl -fsSL https://raw.githubusercontent.com/%s/main/install.sh | bash", app.Repo))
 		cmd.Env = os.Environ()
@@ -72,12 +95,12 @@ func installOrUpdateCmd(app suiteApp) tea.Cmd {
 			}
 			return installFinishedMsg{
 				appID: app.ID,
-				apps:  refreshApps(""),
+				apps:  refreshAppsWithConfig(cfg),
 				err:   fmt.Errorf("%s install failed: %s", app.Name, msg),
 			}
 		}
 
-		refreshed := refreshApps("")
+		refreshed := refreshAppsWithConfig(cfg)
 		action := "Installed "
 		if app.Installed {
 			action = "Updated "

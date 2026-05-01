@@ -58,9 +58,12 @@ The launcher itself is not listed in the catalog.
 Apps found on your `PATH`. This is the default page.
 
 - Launch apps with `enter`
+- Installed apps are sorted by frecency based on launch count plus recency
 - See local version info when `<app> --version` is available
 - Press `r` to manually check the latest GitHub release
 - Press `u` to update an app when a newer release is found
+- The list is shown as a compact table with a capped visible height and scrollable rows
+- Each suite app keeps its own emoji and accent color in the name column for faster visual scanning
 
 ### Available
 
@@ -74,6 +77,8 @@ Install and update actions reuse each app's own `install.sh` release installer.
 
 - `tab`, `1`, `2` - switch between Installed and Available
 - `j/k`, `up/down` - move selection
+- `ctrl+u`, `ctrl+d`, `pgup`, `pgdown` - move by visible page
+- `g`, `G` - jump to top or bottom
 - `enter` - launch selected installed app
 - `i` - install selected available app
 - `u` - update selected installed app when an update is available
@@ -84,13 +89,14 @@ Install and update actions reuse each app's own `install.sh` release installer.
 
 Config file: `~/.config/tui-hub/config.json`
 
-The config is minimal and user-state only. Right now it stores the last active page. The app catalog, repo metadata, install behavior, and descriptions are built into `tui-hub`.
+The config is minimal and user-state only. It stores the last active page plus per-app launch count and last-launched timestamps used for Installed-page frecency sorting. The app catalog, repo metadata, install behavior, and descriptions are built into `tui-hub`.
 
 Unknown fields in an older config are ignored.
 
 ## Notes
 
 - Version checks are manual only. `tui-hub` does not hit GitHub on startup.
+- Startup app discovery is separate from version probing, so Installed/Available can populate even if a suite app has slow or inconsistent version flag behavior.
 - Games are intentionally out of scope for this version and can come back later.
 - Future versions can grow into custom user-added app entries, but v1 stays curated and simple.
 

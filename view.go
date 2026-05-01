@@ -15,20 +15,14 @@ var (
 	activeTabStyle = lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("230")).
-			Background(lipgloss.Color("57")).
-			Padding(0, 1)
+			Underline(true)
 
 	tabStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("245")).
-			Padding(0, 1)
+			Foreground(lipgloss.Color("245"))
 
 	selectedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("230")).
 			Background(lipgloss.Color("57")).
-			Bold(true)
-
-	nameStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("230")).
 			Bold(true)
 
 	dimStyle = lipgloss.NewStyle().
@@ -50,23 +44,37 @@ var (
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("240")).
 			Padding(0, 1)
+
+	headerStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("117")).
+			Bold(true)
 )
 
 func (m model) View() string {
-	var b strings.Builder
+	if m.width == 0 || m.height == 0 {
+		return "loading..."
+	}
 
-	b.WriteString(titleStyle.Render("tui-hub"))
-	b.WriteString(dimStyle.Render("  launch and manage your tui-suite"))
-	b.WriteString("\n")
-	b.WriteString(m.renderTabs())
-	b.WriteString("\n\n")
-	b.WriteString(m.renderList())
-	b.WriteString("\n")
-	b.WriteString(m.renderStatus())
-	b.WriteString("\n")
-	b.WriteString(m.renderHelp())
+	header := m.renderHeader()
+	sep := dimStyle.Render(strings.Repeat("─", max(20, m.width)))
+	content := m.renderTable()
+	status := m.renderStatus()
+	footer := m.renderHelp()
 
-	return b.String()
+	return lipgloss.JoinVertical(lipgloss.Left, header, sep, content, sep, footer, status)
+}
+
+func (m model) renderHeader() string {
+	title := titleStyle.Render("tui-hub") + " " + dimStyle.Render(m.version)
+	tabs := m.renderTabs()
+	right := dimStyle.Render(fmt.Sprintf("%d apps", len(m.visibleApps())))
+
+	line := title + "  " + tabs
+	gap := m.width - lipgloss.Width(line) - lipgloss.Width(right)
+	if gap < 2 {
+		return line
+	}
+	return line + strings.Repeat(" ", gap) + right
 }
 
 func (m model) renderTabs() string {
@@ -80,97 +88,172 @@ func (m model) renderTabs() string {
 	} else {
 		available = activeTabStyle.Render(availableLabel)
 	}
-	return installed + " " + available
+	return installed + dimStyle.Render("  │  ") + available
 }
 
-func (m model) renderList() string {
+func (m model) renderTable() string {
 	items := m.visibleApps()
+	panelWidth := m.width - 2
+	if panelWidth < 50 {
+		panelWidth = 50
+	}
+
 	if len(items) == 0 {
 		text := "No apps here."
 		if m.page == pageInstalled {
 			text = "No suite apps found on PATH yet. Switch to Available and press i to install one."
 		}
-		return panelStyle.Width(max(40, m.width-2)).Render(dimStyle.Render(text))
+		return panelStyle.Width(panelWidth).Render(dimStyle.Render(text))
 	}
 
-	contentWidth := 90
-	if m.width > 10 {
-		contentWidth = m.width - 6
+	rowsVisible := m.visibleRowCount()
+	start := m.scroll[m.page]
+	if start < 0 {
+		start = 0
 	}
-	if contentWidth < 40 {
-		contentWidth = 40
+	if start > len(items) {
+		start = len(items)
+	}
+	end := start + rowsVisible
+	if end > len(items) {
+		end = len(items)
 	}
 
-	var rows []string
-	for i, app := range items {
-		line := m.renderAppRow(i == m.selected[m.page], app, contentWidth-4)
-		rows = append(rows, line)
+	innerWidth := panelWidth - 4
+	if innerWidth < 46 {
+		innerWidth = 46
 	}
-	return panelStyle.Width(contentWidth).Render(strings.Join(rows, "\n\n"))
+	nameW, versionW, statusW := 16, 12, 16
+	descW := innerWidth - nameW - versionW - statusW - 6
+	if descW < 16 {
+		descW = 16
+	}
+
+	lines := []string{
+		m.renderHeaderRow(nameW, descW, versionW, statusW),
+		dimStyle.Render(strings.Repeat("─", innerWidth)),
+	}
+	for i := start; i < end; i++ {
+		lines = append(lines, m.renderDataRow(i == m.selected[m.page], items[i], nameW, descW, versionW, statusW))
+	}
+	for len(lines) < rowsVisible+2 {
+		lines = append(lines, strings.Repeat(" ", innerWidth))
+	}
+
+	meta := dimStyle.Render(fmt.Sprintf("rows %d-%d of %d", start+1, end, len(items)))
+	if len(items) <= rowsVisible {
+		meta = dimStyle.Render(fmt.Sprintf("%d rows", len(items)))
+	}
+	lines = append(lines, "", meta)
+
+	return panelStyle.Width(panelWidth).Render(strings.Join(lines, "\n"))
 }
 
-func (m model) renderAppRow(selected bool, app suiteApp, width int) string {
-	versionBits := []string{}
-	if app.LocalVersion != "" {
-		versionBits = append(versionBits, "local "+app.LocalVersion)
-	}
-	if app.LatestVersion != "" {
-		versionBits = append(versionBits, "latest "+app.LatestVersion)
-	}
-	meta := strings.Join(versionBits, "  ")
-	if meta == "" {
-		if app.Installed {
-			meta = "installed"
-		} else {
-			meta = "not installed"
-		}
-	}
-	if app.UpdateAvailable {
-		meta += "  update available"
+func (m model) renderHeaderRow(nameW, descW, versionW, statusW int) string {
+	return headerStyle.Render(
+		padRight("Name", nameW) + "  " +
+			padRight("Description", descW) + "  " +
+			padRight("Version", versionW) + "  " +
+			padRight("Status", statusW),
+	)
+}
+
+func (m model) renderDataRow(selected bool, app suiteApp, nameW, descW, versionW, statusW int) string {
+	version := app.LocalVersion
+	if version == "" {
+		version = "-"
 	}
 
-	line1 := nameStyle.Render(app.Name)
-	line2 := dimStyle.Render(app.Description)
-	line3 := accentStyle.Render(meta)
+	status := "available"
+	if app.Installed {
+		status = "installed"
+	}
 	if app.UpdateAvailable {
-		line3 = warnStyle.Render(meta)
+		status = "update -> " + app.LatestVersion
 	}
 
-	row := strings.Join([]string{line1, line2, line3}, "\n")
-	row = lipgloss.NewStyle().Width(width).Render(row)
+	nameCell := m.renderNameCell(app, nameW)
+	line := nameCell + "  " +
+		padRight(truncate(app.Description, descW), descW) + "  " +
+		padRight(version, versionW) + "  " +
+		padRight(status, statusW)
+
 	if selected {
-		return selectedStyle.Width(width).Render(row)
+		return selectedStyle.Width(nameW + descW + versionW + statusW + 6).Render(line)
 	}
-	return row
+	if app.UpdateAvailable {
+		return warnStyle.Render(line)
+	}
+	return line
+}
+
+func (m model) renderNameCell(app suiteApp, width int) string {
+	label := strings.TrimSpace(app.Icon + " " + app.Name)
+	styled := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(app.Color)).
+		Bold(true).
+		Render(truncate(label, width))
+	return padRight(styled, width)
 }
 
 func (m model) renderStatus() string {
 	if m.errMsg != "" {
-		return errorStyle.Render(m.errMsg)
+		return errorStyle.Render("  " + m.errMsg)
 	}
 	if m.busy {
-		return warnStyle.Render(m.status)
+		return warnStyle.Render("  " + m.status)
 	}
 	if m.status != "" {
-		return accentStyle.Render(m.status)
+		return accentStyle.Render("  " + m.status)
 	}
-	return dimStyle.Render("Ready.")
+	return dimStyle.Render("  Ready.")
 }
 
 func (m model) renderHelp() string {
 	parts := []string{
-		accentStyle.Render("tab/1/2") + dimStyle.Render(" switch"),
-		accentStyle.Render("j/k") + dimStyle.Render(" move"),
+		accentStyle.Render("j/k") + " " + dimStyle.Render("move"),
+		accentStyle.Render("ctrl+u/d") + " " + dimStyle.Render("page"),
+		accentStyle.Render("g/G") + " " + dimStyle.Render("top/bottom"),
+		accentStyle.Render("tab/1/2") + " " + dimStyle.Render("switch"),
 	}
 	if m.page == pageInstalled {
-		parts = append(parts, accentStyle.Render("enter")+dimStyle.Render(" launch"))
-		parts = append(parts, accentStyle.Render("u")+dimStyle.Render(" update"))
+		parts = append(parts, accentStyle.Render("enter")+" "+dimStyle.Render("launch"))
+		parts = append(parts, accentStyle.Render("u")+" "+dimStyle.Render("update"))
 	} else {
-		parts = append(parts, accentStyle.Render("i")+dimStyle.Render(" install"))
+		parts = append(parts, accentStyle.Render("i")+" "+dimStyle.Render("install"))
 	}
-	parts = append(parts, accentStyle.Render("r")+dimStyle.Render(" check versions"))
-	parts = append(parts, accentStyle.Render("q")+dimStyle.Render(" quit"))
-	return strings.Join(parts, dimStyle.Render("  •  "))
+	parts = append(parts, accentStyle.Render("r")+" "+dimStyle.Render("check versions"))
+	parts = append(parts, accentStyle.Render("q")+" "+dimStyle.Render("quit"))
+	return "  " + strings.Join(parts, dimStyle.Render("  ·  "))
+}
+
+func padRight(s string, width int) string {
+	w := lipgloss.Width(s)
+	if w >= width {
+		return truncate(s, width)
+	}
+	return s + strings.Repeat(" ", width-w)
+}
+
+func truncate(s string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if lipgloss.Width(s) <= width {
+		return s
+	}
+	if width == 1 {
+		return "…"
+	}
+	runes := []rune(s)
+	out := ""
+	for _, r := range runes {
+		if lipgloss.Width(out+string(r)+"…") > width {
+			break
+		}
+		out += string(r)
+	}
+	return out + "…"
 }
 
 func max(a, b int) int {

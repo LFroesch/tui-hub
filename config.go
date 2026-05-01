@@ -4,14 +4,24 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type config struct {
-	LastPage string `json:"last_page"`
+	LastPage string              `json:"last_page"`
+	AppState map[string]appState `json:"app_state,omitempty"`
+}
+
+type appState struct {
+	LaunchCount  int    `json:"launch_count"`
+	LastLaunched string `json:"last_launched,omitempty"`
 }
 
 func defaultConfig() config {
-	return config{LastPage: pageInstalled}
+	return config{
+		LastPage: pageInstalled,
+		AppState: map[string]appState{},
+	}
 }
 
 func configPath() string {
@@ -33,10 +43,7 @@ func loadConfig() config {
 		return cfg
 	}
 	_ = json.Unmarshal(data, &cfg)
-	if cfg.LastPage != pageInstalled && cfg.LastPage != pageAvailable {
-		cfg.LastPage = pageInstalled
-	}
-	return cfg
+	return normalizeConfig(cfg)
 }
 
 func saveConfig(cfg config) error {
@@ -49,4 +56,25 @@ func saveConfig(cfg config) error {
 		return err
 	}
 	return os.WriteFile(path, data, 0o644)
+}
+
+func normalizeConfig(cfg config) config {
+	if cfg.LastPage != pageInstalled && cfg.LastPage != pageAvailable {
+		cfg.LastPage = pageInstalled
+	}
+	if cfg.AppState == nil {
+		cfg.AppState = map[string]appState{}
+	}
+	for appID, state := range cfg.AppState {
+		if state.LaunchCount < 0 {
+			state.LaunchCount = 0
+		}
+		if state.LastLaunched != "" {
+			if _, err := time.Parse(time.RFC3339, state.LastLaunched); err != nil {
+				state.LastLaunched = ""
+			}
+		}
+		cfg.AppState[appID] = state
+	}
+	return cfg
 }
