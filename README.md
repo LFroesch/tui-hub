@@ -56,6 +56,10 @@ Config file: `~/.config/tui-hub/config.json`
 
 Auto-created on first run. Add apps/games in JSON format with name, description, command, and path.
 
+### Environment variables
+
+- `TUI_HUB_DEMO=1` — when set, the launcher reappears after a child app exits (suitable for kiosks / web demos). Default behavior is to exit tui-hub when the launched app quits.
+
 ## License
 
 [AGPL-3.0](LICENSE)

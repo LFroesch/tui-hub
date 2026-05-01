@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -12,6 +13,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+var version = "dev"
 
 var (
 	// Color scheme matching your other TUI apps
@@ -44,6 +47,18 @@ var (
 )
 
 func main() {
+	showVersion := flag.Bool("version", false, "Print version and exit")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "tui-hub — Launcher for the TUI suite (apps + games)\n\n")
+		fmt.Fprintf(os.Stderr, "Usage: tui-hub [flags]\n\n")
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+	if *showVersion {
+		fmt.Println("tui-hub " + version)
+		os.Exit(0)
+	}
+
 	// Initialize the launcher
 	launcher := NewLauncher()
 
@@ -213,9 +228,9 @@ func loadConfig() Config {
 func getDefaultConfig() Config {
 	return Config{
 		Launcher: LauncherConfig{
-			Title:   "Terminal Gaming Suite",
+			Title:   "TUI Suite",
 			Version: "1.0.0",
-			Author:  "Your Name",
+			Author:  "Lucas Froeschner",
 			Theme:   "retro",
 		},
 		Games:   []GameEntry{},
@@ -375,7 +390,7 @@ func (m *Launcher) launchGame(game GameEntry) (tea.Model, tea.Cmd) {
 	// Ensure the command inherits the current environment (including PATH)
 	cmd.Env = os.Environ()
 
-	return m, tea.ExecProcess(
+	execCmd := tea.ExecProcess(
 		cmd,
 		func(err error) tea.Msg {
 			if err != nil {
@@ -384,6 +399,11 @@ func (m *Launcher) launchGame(game GameEntry) (tea.Model, tea.Cmd) {
 			return fmt.Sprintf("Returned from %s", game.Name)
 		},
 	)
+
+	if os.Getenv("TUI_HUB_DEMO") == "1" {
+		return m, execCmd
+	}
+	return m, tea.Sequence(execCmd, tea.Quit)
 }
 
 func (m *Launcher) View() string {
