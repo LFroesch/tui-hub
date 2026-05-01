@@ -34,6 +34,7 @@ func TestShouldOfferUpdate(t *testing.T) {
 		want   bool
 	}{
 		{name: "same", local: "1.2.3", latest: "v1.2.3", want: false},
+		{name: "dirty local build", local: "v0.9.1-dirty", latest: "v0.9.1", want: false},
 		{name: "different", local: "1.2.3", latest: "v1.2.4", want: true},
 		{name: "missing local", local: "", latest: "v1.2.4", want: true},
 		{name: "missing latest", local: "1.2.3", latest: "", want: false},
@@ -43,6 +44,26 @@ func TestShouldOfferUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := shouldOfferUpdate(tt.local, tt.latest); got != tt.want {
 				t.Fatalf("shouldOfferUpdate(%q, %q) = %v, want %v", tt.local, tt.latest, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNormalizeVersion(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{name: "trim v prefix", in: "v1.2.3", want: "1.2.3"},
+		{name: "trim dirty suffix", in: "v0.9.1-dirty", want: "0.9.1"},
+		{name: "keep prerelease", in: "v1.2.3-rc1", want: "1.2.3-rc1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := normalizeVersion(tt.in); got != tt.want {
+				t.Fatalf("normalizeVersion(%q) = %q, want %q", tt.in, got, tt.want)
 			}
 		})
 	}

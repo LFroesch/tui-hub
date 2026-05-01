@@ -2,6 +2,7 @@
 
 ## 2026-04-30
 
+- Update checks now treat local `-dirty` build suffixes as equivalent to the matching release tag, so source-built binaries do not show false-positive updates like `v0.9.1-dirty -> v0.9.1`.
 - Rebuilt `tui-hub` from the old games-oriented launcher template into a curated `tui-suite` app launcher with two pages: `Installed` and `Available`.
 - Replaced config-authored app definitions with a built-in catalog for `runx`, `scout`, `portmon`, `backup-xd`, `seedbank`, `zap`, `bobdb`, `logdog`, `unrot`, `sb`, and `dwight`.
 - Removed hardcoded local repo launch paths. Launch now resolves installed binaries from `PATH`, local version info comes from `<app> --version`, and remote release checks are manual only.

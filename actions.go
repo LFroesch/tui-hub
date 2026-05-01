@@ -151,5 +151,6 @@ func shouldOfferUpdate(localVersion, latestVersion string) bool {
 }
 
 func normalizeVersion(v string) string {
-	return strings.TrimPrefix(strings.TrimSpace(v), "v")
+	normalized := strings.TrimPrefix(strings.TrimSpace(v), "v")
+	return strings.TrimSuffix(normalized, "-dirty")
 }

@@ -96,6 +96,7 @@ Unknown fields in an older config are ignored.
 ## Notes
 
 - Version checks are manual only. `tui-hub` does not hit GitHub on startup.
+- Local builds that report a `-dirty` version suffix are treated as equivalent to the matching release tag for update checks.
 - Startup app discovery is separate from version probing, so Installed/Available can populate even if a suite app has slow or inconsistent version flag behavior.
 - Games are intentionally out of scope for this version and can come back later.
 - Future versions can grow into custom user-added app entries, but v1 stays curated and simple.
