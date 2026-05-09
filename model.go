@@ -28,6 +28,7 @@ type suiteApp struct {
 type model struct {
 	version    string
 	cfg        config
+	demo       bool
 	page       string
 	width      int
 	height     int
@@ -80,6 +81,7 @@ func initialModel(appVersion string) model {
 	m := model{
 		version:  appVersion,
 		cfg:      cfg,
+		demo:     isDemoMode(),
 		page:     cfg.LastPage,
 		selected: map[string]int{pageInstalled: 0, pageAvailable: 0},
 		scroll:   map[string]int{pageInstalled: 0, pageAvailable: 0},
@@ -87,6 +89,10 @@ func initialModel(appVersion string) model {
 	}
 	if m.page != pageAvailable {
 		m.page = pageInstalled
+	}
+	if m.demo {
+		m.page = pageInstalled
+		m.status = "Public demo mode: launch-only, read-only, and sandboxed."
 	}
 	return m
 }
@@ -176,13 +182,22 @@ func (m model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "1":
 		return m.switchPage(pageInstalled)
 	case "2":
+		if m.demo {
+			return m, nil
+		}
 		return m.switchPage(pageAvailable)
 	case "tab", "right", "l":
+		if m.demo {
+			return m, nil
+		}
 		if m.page == pageInstalled {
 			return m.switchPage(pageAvailable)
 		}
 		return m.switchPage(pageInstalled)
 	case "shift+tab", "left", "h":
+		if m.demo {
+			return m, nil
+		}
 		if m.page == pageAvailable {
 			return m.switchPage(pageInstalled)
 		}
@@ -212,6 +227,11 @@ func (m model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.ensureSelectionVisible()
 		return m, nil
 	case "r":
+		if m.demo {
+			m.status = "Version checks are disabled in the public demo."
+			m.errMsg = ""
+			return m, nil
+		}
 		if m.busy || m.checking {
 			return m, nil
 		}
@@ -232,6 +252,11 @@ func (m model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.errMsg = ""
 		return m, launchAppCmd(app)
 	case "i":
+		if m.demo {
+			m.status = "Install is disabled in the public demo. Run tui-hub locally to install apps."
+			m.errMsg = ""
+			return m, nil
+		}
 		if m.busy || m.page != pageAvailable {
 			return m, nil
 		}
@@ -245,6 +270,11 @@ func (m model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.errMsg = ""
 		return m, installOrUpdateCmd(app, m.cfg)
 	case "u":
+		if m.demo {
+			m.status = "Update is disabled in the public demo. Run tui-hub locally to update apps."
+			m.errMsg = ""
+			return m, nil
+		}
 		if m.busy || m.page != pageInstalled {
 			return m, nil
 		}
@@ -402,6 +432,9 @@ func refreshAppsWithConfig(cfg config) []suiteApp {
 			app.Installed = true
 			app.ResolvedPath = path
 		}
+		if isDemoMode() && !app.Installed {
+			continue
+		}
 		apps = append(apps, app)
 	}
 
@@ -425,8 +458,12 @@ func saveConfigCmd(cfg config) tea.Cmd {
 }
 
 func launchAppCmd(app suiteApp) tea.Cmd {
-	cmd := exec.Command(app.ResolvedPath)
-	cmd.Env = os.Environ()
+	args := demoLaunchArgs(app.ID)
+	cmd := exec.Command(app.ResolvedPath, args...)
+	cmd.Env = withDemoEnv(os.Environ())
+	if dir := demoWorkingDir(app.ID); dir != "" {
+		cmd.Dir = dir
+	}
 	return tea.Sequence(
 		tea.ExecProcess(cmd, func(err error) tea.Msg {
 			if err != nil {

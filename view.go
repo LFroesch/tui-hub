@@ -66,6 +66,9 @@ func (m model) View() string {
 
 func (m model) renderHeader() string {
 	title := titleStyle.Render("tui-hub") + " " + dimStyle.Render(m.version)
+	if m.demo {
+		title += " " + warnStyle.Render("[DEMO]")
+	}
 	tabs := m.renderTabs()
 	right := dimStyle.Render(fmt.Sprintf("%d apps", len(m.visibleApps())))
 
@@ -78,6 +81,9 @@ func (m model) renderHeader() string {
 }
 
 func (m model) renderTabs() string {
+	if m.demo {
+		return activeTabStyle.Render(fmt.Sprintf("Installed (%d)", len(m.appsForPage(pageInstalled))))
+	}
 	installedLabel := fmt.Sprintf("1 Installed (%d)", len(m.appsForPage(pageInstalled)))
 	availableLabel := fmt.Sprintf("2 Available (%d)", len(m.appsForPage(pageAvailable)))
 
@@ -94,14 +100,17 @@ func (m model) renderTabs() string {
 func (m model) renderTable() string {
 	items := m.visibleApps()
 	panelWidth := m.width - 2
-	if panelWidth < 50 {
-		panelWidth = 50
+	if panelWidth < 1 {
+		panelWidth = 1
 	}
 
 	if len(items) == 0 {
 		text := "No apps here."
 		if m.page == pageInstalled {
 			text = "No suite apps found on PATH yet. Switch to Available and press i to install one."
+		}
+		if m.demo {
+			text = "No demo apps are available in this build."
 		}
 		return panelStyle.Width(panelWidth).Render(dimStyle.Render(text))
 	}
@@ -120,13 +129,30 @@ func (m model) renderTable() string {
 	}
 
 	innerWidth := panelWidth - 4
-	if innerWidth < 46 {
-		innerWidth = 46
+	if innerWidth < 8 {
+		innerWidth = 8
 	}
-	nameW, versionW, statusW := 16, 12, 16
+	nameW := max(6, innerWidth*28/100)
+	versionW := max(5, innerWidth*18/100)
+	statusW := max(7, innerWidth*24/100)
 	descW := innerWidth - nameW - versionW - statusW - 6
-	if descW < 16 {
-		descW = 16
+	if descW < 4 {
+		deficit := 4 - descW
+		descW = 4
+		if statusW > 7 {
+			shift := min(statusW-7, deficit)
+			statusW -= shift
+			deficit -= shift
+		}
+		if versionW > 5 && deficit > 0 {
+			shift := min(versionW-5, deficit)
+			versionW -= shift
+			deficit -= shift
+		}
+		if nameW > 6 && deficit > 0 {
+			shift := min(nameW-6, deficit)
+			nameW -= shift
+		}
 	}
 
 	lines := []string{
@@ -206,6 +232,9 @@ func (m model) renderStatus() string {
 	if m.status != "" {
 		return accentStyle.Render("  " + m.status)
 	}
+	if m.demo {
+		return dimStyle.Render("  Public demo: sandboxed session, fresh workspace every run, limited integrations.")
+	}
 	return dimStyle.Render("  Ready.")
 }
 
@@ -214,15 +243,21 @@ func (m model) renderHelp() string {
 		accentStyle.Render("j/k") + " " + dimStyle.Render("move"),
 		accentStyle.Render("ctrl+u/d") + " " + dimStyle.Render("page"),
 		accentStyle.Render("g/G") + " " + dimStyle.Render("top/bottom"),
-		accentStyle.Render("tab/1/2") + " " + dimStyle.Render("switch"),
+	}
+	if !m.demo {
+		parts = append(parts, accentStyle.Render("tab/1/2")+" "+dimStyle.Render("switch"))
 	}
 	if m.page == pageInstalled {
 		parts = append(parts, accentStyle.Render("enter")+" "+dimStyle.Render("launch"))
-		parts = append(parts, accentStyle.Render("u")+" "+dimStyle.Render("update"))
-	} else {
+		if !m.demo {
+			parts = append(parts, accentStyle.Render("u")+" "+dimStyle.Render("update"))
+		}
+	} else if !m.demo {
 		parts = append(parts, accentStyle.Render("i")+" "+dimStyle.Render("install"))
 	}
-	parts = append(parts, accentStyle.Render("r")+" "+dimStyle.Render("check versions"))
+	if !m.demo {
+		parts = append(parts, accentStyle.Render("r")+" "+dimStyle.Render("check versions"))
+	}
 	parts = append(parts, accentStyle.Render("q")+" "+dimStyle.Render("quit"))
 	return "  " + strings.Join(parts, dimStyle.Render("  ·  "))
 }

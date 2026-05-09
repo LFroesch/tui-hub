@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 	"time"
 )
@@ -194,4 +195,58 @@ func TestRecordLaunchUpdatesConfigState(t *testing.T) {
 	if state.LastLaunched != when.Format(time.RFC3339) {
 		t.Fatalf("last launched = %q, want %q", state.LastLaunched, when.Format(time.RFC3339))
 	}
+}
+
+func TestIsDemoMode(t *testing.T) {
+	t.Setenv("TUI_HUB_DEMO", "")
+	t.Setenv("DEMO_ENV", "")
+	t.Setenv("DEMO_READONLY", "")
+	if isDemoMode() {
+		t.Fatal("expected demo mode to be off")
+	}
+
+	t.Setenv("DEMO_ENV", "1")
+	if !isDemoMode() {
+		t.Fatal("expected demo mode to be on when DEMO_ENV=1")
+	}
+}
+
+func TestWithDemoEnvAddsFlags(t *testing.T) {
+	t.Setenv("TUI_HUB_DEMO", "")
+	t.Setenv("DEMO_ENV", "1")
+	t.Setenv("DEMO_READONLY", "")
+
+	env := withDemoEnv([]string{"PATH=" + os.Getenv("PATH")})
+	joined := ""
+	for _, item := range env {
+		joined += item + "\n"
+	}
+	for _, want := range []string{"TUI_HUB_DEMO=1", "DEMO_ENV=1", "DEMO_READONLY=1"} {
+		if !containsLine(env, want) {
+			t.Fatalf("expected env to include %q", want)
+		}
+	}
+}
+
+func TestDemoLaunchArgsScoutUsesRootBoundary(t *testing.T) {
+	t.Setenv("TUI_HUB_DEMO", "1")
+	got := demoLaunchArgs("scout")
+	if len(got) != 2 {
+		t.Fatalf("expected 2 args, got %d: %v", len(got), got)
+	}
+	if got[0] != "--root" {
+		t.Fatalf("expected first arg to be --root, got %q", got[0])
+	}
+	if got[1] != "/home/demo/seed-data/scout" {
+		t.Fatalf("expected scout demo root, got %q", got[1])
+	}
+}
+
+func containsLine(items []string, want string) bool {
+	for _, item := range items {
+		if item == want {
+			return true
+		}
+	}
+	return false
 }

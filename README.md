@@ -1,105 +1,90 @@
-# TUI Hub
+# tui-hub
 
-Launcher for the `tui-suite` app set. `tui-hub` keeps the main view focused on apps you already have installed, while a separate page lets you browse and install the rest of the curated suite.
+Launcher for the `tui-suite` app collection. `tui-hub` keeps the default view focused on what you already have installed, and gives you a second page for browsing the curated install catalog.
 
-## Quick Install
+## Install
 
 Supported platforms: Linux and macOS. On Windows, use WSL.
 
-Recommended (installs to `~/.local/bin`):
+Recommended:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/LFroesch/tui-hub/main/install.sh | bash
 ```
 
-Or download a binary from [GitHub Releases](https://github.com/LFroesch/tui-hub/releases).
-
-Or install with Go:
+Other options:
 
 ```bash
 go install github.com/LFroesch/tui-hub@latest
-```
-
-Or build from source:
-
-```bash
 make install
 ```
 
-Command:
+Run:
 
 ```bash
 tui-hub
 tui-hub --version
 ```
 
-## What It Shows
-
-`tui-hub` ships with a built-in catalog of these suite apps:
-
-- `runx`
-- `scout`
-- `portmon`
-- `backup-xd`
-- `seedbank`
-- `zap`
-- `bobdb`
-- `logdog`
-- `unrot`
-- `sb`
-- `dwight`
-
-The launcher itself is not listed in the catalog.
-
 ## Pages
 
-### Installed
+| Page | Purpose |
+|------|---------|
+| Installed | Launch apps already on your `PATH`, sorted by frecency |
+| Available | Browse curated suite apps that are not installed yet |
 
-Apps found on your `PATH`. This is the default page.
+Install and update actions call each app's own `install.sh` release installer.
 
-- Launch apps with `enter`
-- Installed apps are sorted by frecency based on launch count plus recency
-- See local version info when `<app> --version` is available
-- Press `r` to manually check the latest GitHub release
-- Press `u` to update an app when a newer release is found
-- The list is shown as a compact table with a capped visible height and scrollable rows
-- Each suite app keeps its own emoji and accent color in the name column for faster visual scanning
+## Projects In This Suite
 
-### Available
+| App | Description | In `tui-hub` catalog |
+|-----|-------------|----------------------|
+| [backup-xd](https://github.com/LFroesch/backup-xd) | Backup manager for databases and filesystem targets. | Yes |
+| [bobdb](https://github.com/LFroesch/bobdb) | Database browser and query runner for SQLite, Postgres, and MongoDB. | Yes |
+| [dwight](https://github.com/LFroesch/dwight) | Terminal AI chat client for Ollama and Gemini. | Yes |
+| [logdog](https://github.com/LFroesch/logdog) | Log discovery, inspection, live tailing, and CLI filtering. | Yes |
+| [portmon](https://github.com/LFroesch/portmon) | Port monitor and lightweight system dashboard. | Yes |
+| [runx](https://github.com/LFroesch/runx) | Script runner with schedules, live output, and history. | Yes |
+| [sb](https://github.com/LFroesch/sb) | `WORK.md` control plane for task cleanup, dumps, and agents. | Yes |
+| [scout](https://github.com/LFroesch/scout) | File explorer with preview, search, and bookmarks. | Yes |
+| [seedbank](https://github.com/LFroesch/seedbank) | Fake-data generator for fixtures and demos. | Yes |
+| [stickies](https://github.com/LFroesch/stickies) | Quick notes and daily journal with a small CLI. | Yes |
+| [unrot](https://github.com/LFroesch/unrot) | Knowledge review and spaced-repetition study tool. | Yes |
+| [zap](https://github.com/LFroesch/zap) | Personal file registry for fast reopening and editing. | Yes |
 
-Curated suite apps that are not currently installed.
-
-- Press `i` to install the selected app
-
-Install and update actions reuse each app's own `install.sh` release installer.
+`chunes` is out of the current `tui-hub` v1 scope.
 
 ## Controls
 
-- `tab`, `1`, `2` - switch between Installed and Available
-- `j/k`, `up/down` - move selection
-- `ctrl+u`, `ctrl+d`, `pgup`, `pgdown` - move by visible page
-- `g`, `G` - jump to top or bottom
-- `enter` - launch selected installed app
-- `i` - install selected available app
-- `u` - update selected installed app when an update is available
-- `r` - manually check latest releases for installed apps
-- `q` - quit
+| Key | Action |
+|-----|--------|
+| `tab`, `shift+tab`, `1`, `2` | Switch pages |
+| `j/k`, `up/down` | Move |
+| `enter` | Launch selected installed app |
+| `i` | Install selected available app |
+| `u` | Update selected installed app |
+| `r` | Refresh release info for installed apps |
+| `g`, `G` | Jump to top or bottom |
+| `?` | Help |
+| `q` | Quit |
 
-## Configuration
+## Config
 
-Config file: `~/.config/tui-hub/config.json`
+Config is stored at `~/.config/tui-hub/config.json`.
 
-The config is minimal and user-state only. It stores the last active page plus per-app launch count and last-launched timestamps used for Installed-page frecency sorting. The app catalog, repo metadata, install behavior, and descriptions are built into `tui-hub`.
+It only keeps user state:
 
-Unknown fields in an older config are ignored.
+- last active page
+- per-app launch count
+- last-launched timestamps used for frecency sorting
+
+The catalog itself is built into the app.
 
 ## Notes
 
-- Version checks are manual only. `tui-hub` does not hit GitHub on startup.
-- Local builds that report a `-dirty` version suffix are treated as equivalent to the matching release tag for update checks.
-- Startup app discovery is separate from version probing, so Installed/Available can populate even if a suite app has slow or inconsistent version flag behavior.
-- Games are intentionally out of scope for this version and can come back later.
-- Future versions can grow into custom user-added app entries, but v1 stays curated and simple.
+- version checks are manual; `tui-hub` does not call GitHub on startup
+- local builds with a `-dirty` suffix are treated as the matching release version for update checks
+- games are out of scope for the current launcher
 
 ## License
 
