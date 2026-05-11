@@ -57,11 +57,13 @@ func (m model) View() string {
 
 	header := m.renderHeader()
 	sep := dimStyle.Render(strings.Repeat("─", max(20, m.width)))
-	content := m.renderTable()
-	status := m.renderStatus()
+	content := m.renderContent()
 	footer := m.renderHelp()
-
-	return lipgloss.JoinVertical(lipgloss.Left, header, sep, content, sep, footer, status)
+	parts := []string{header, sep, content, sep, footer}
+	if status := m.renderStatus(); status != "" {
+		parts = append(parts, status)
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }
 
 func (m model) renderHeader() string {
@@ -97,6 +99,14 @@ func (m model) renderTabs() string {
 	return installed + dimStyle.Render("  │  ") + available
 }
 
+func (m model) renderContent() string {
+	parts := []string{m.renderTable()}
+	if details := m.renderDetails(); details != "" {
+		parts = append(parts, details)
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, parts...)
+}
+
 func (m model) renderTable() string {
 	items := m.visibleApps()
 	panelWidth := m.width - 2
@@ -128,10 +138,25 @@ func (m model) renderTable() string {
 		end = len(items)
 	}
 
-	innerWidth := panelWidth - 4
-	if innerWidth < 8 {
-		innerWidth = 8
+	innerWidth := max(8, panelWidth-4)
+	lines := m.renderTableLines(items, innerWidth, start, end, rowsVisible)
+	meta := dimStyle.Render(fmt.Sprintf("rows %d-%d of %d", start+1, end, len(items)))
+	if len(items) <= rowsVisible {
+		meta = dimStyle.Render(fmt.Sprintf("%d rows", len(items)))
 	}
+	lines = append(lines, "", meta)
+
+	return panelStyle.Width(panelWidth).Render(strings.Join(lines, "\n"))
+}
+
+func (m model) renderTableLines(items []suiteApp, innerWidth, start, end, rowsVisible int) []string {
+	if m.useCompactLayout() {
+		return m.renderCompactTable(items, innerWidth, start, end, rowsVisible)
+	}
+	return m.renderWideTable(items, innerWidth, start, end, rowsVisible)
+}
+
+func (m model) renderWideTable(items []suiteApp, innerWidth, start, end, rowsVisible int) []string {
 	nameW := max(6, innerWidth*28/100)
 	versionW := max(5, innerWidth*18/100)
 	statusW := max(7, innerWidth*24/100)
@@ -165,14 +190,28 @@ func (m model) renderTable() string {
 	for len(lines) < rowsVisible+2 {
 		lines = append(lines, strings.Repeat(" ", innerWidth))
 	}
+	return lines
+}
 
-	meta := dimStyle.Render(fmt.Sprintf("rows %d-%d of %d", start+1, end, len(items)))
-	if len(items) <= rowsVisible {
-		meta = dimStyle.Render(fmt.Sprintf("%d rows", len(items)))
+func (m model) renderCompactTable(items []suiteApp, innerWidth, start, end, rowsVisible int) []string {
+	nameW := max(8, innerWidth*30/100)
+	descW := innerWidth - nameW - 2
+	if descW < 12 {
+		descW = 12
+		nameW = max(8, innerWidth-descW-2)
 	}
-	lines = append(lines, "", meta)
 
-	return panelStyle.Width(panelWidth).Render(strings.Join(lines, "\n"))
+	lines := []string{
+		headerStyle.Render(padRight("Name", nameW) + "  " + padRight("Description", descW)),
+		dimStyle.Render(strings.Repeat("─", innerWidth)),
+	}
+	for i := start; i < end; i++ {
+		lines = append(lines, m.renderCompactRow(i == m.selected[m.page], items[i], nameW, descW))
+	}
+	for len(lines) < rowsVisible+2 {
+		lines = append(lines, strings.Repeat(" ", innerWidth))
+	}
+	return lines
 }
 
 func (m model) renderHeaderRow(nameW, descW, versionW, statusW int) string {
@@ -213,6 +252,17 @@ func (m model) renderDataRow(selected bool, app suiteApp, nameW, descW, versionW
 	return line
 }
 
+func (m model) renderCompactRow(selected bool, app suiteApp, nameW, descW int) string {
+	line := m.renderNameCell(app, nameW) + "  " + padRight(truncate(app.DescriptionWithMeta(), descW), descW)
+	if selected {
+		return selectedStyle.Width(nameW + descW + 2).Render(line)
+	}
+	if app.UpdateAvailable {
+		return warnStyle.Render(line)
+	}
+	return line
+}
+
 func (m model) renderNameCell(app suiteApp, width int) string {
 	label := strings.TrimSpace(app.Icon + " " + app.Name)
 	styled := lipgloss.NewStyle().
@@ -229,23 +279,51 @@ func (m model) renderStatus() string {
 	if m.busy {
 		return warnStyle.Render("  " + m.status)
 	}
-	if m.status != "" {
-		return accentStyle.Render("  " + m.status)
-	}
 	if m.demo {
 		return dimStyle.Render("  Public demo: sandboxed session, fresh workspace every run, limited integrations.")
 	}
-	return dimStyle.Render("  Ready.")
+	return ""
+}
+
+func (m model) renderDetails() string {
+	app, ok := m.selectedApp()
+	if !ok {
+		return ""
+	}
+
+	panelWidth := max(1, m.width-2)
+	innerWidth := max(16, panelWidth-4)
+	heading := fmt.Sprintf("%s  %s", strings.TrimSpace(app.Icon+" "+app.Name), dimStyle.Render(app.detailSummary()))
+	descLines := wrapText(app.Description, innerWidth)
+	if maxLines := m.detailDescriptionLines(); len(descLines) > maxLines {
+		descLines = descLines[:maxLines]
+		last := truncate(descLines[len(descLines)-1], innerWidth)
+		descLines[len(descLines)-1] = last
+	}
+
+	lines := []string{
+		headerStyle.Render(truncate(heading, innerWidth)),
+	}
+	lines = append(lines, descLines...)
+	lines = append(lines, dimStyle.Render(truncate("repo "+app.Repo, innerWidth)))
+
+	return panelStyle.Width(panelWidth).Render(strings.Join(lines, "\n"))
 }
 
 func (m model) renderHelp() string {
 	parts := []string{
 		accentStyle.Render("j/k") + " " + dimStyle.Render("move"),
-		accentStyle.Render("ctrl+u/d") + " " + dimStyle.Render("page"),
-		accentStyle.Render("g/G") + " " + dimStyle.Render("top/bottom"),
+	}
+	if m.height >= 20 {
+		parts = append(parts, accentStyle.Render("ctrl+u/d")+" "+dimStyle.Render("page"))
+	}
+	if m.width >= 72 {
+		parts = append(parts, accentStyle.Render("g/G")+" "+dimStyle.Render("top/bottom"))
 	}
 	if !m.demo {
-		parts = append(parts, accentStyle.Render("tab/1/2")+" "+dimStyle.Render("switch"))
+		if m.width >= 84 {
+			parts = append(parts, accentStyle.Render("tab/1/2")+" "+dimStyle.Render("switch"))
+		}
 	}
 	if m.page == pageInstalled {
 		parts = append(parts, accentStyle.Render("enter")+" "+dimStyle.Render("launch"))
@@ -256,10 +334,16 @@ func (m model) renderHelp() string {
 		parts = append(parts, accentStyle.Render("i")+" "+dimStyle.Render("install"))
 	}
 	if !m.demo {
-		parts = append(parts, accentStyle.Render("r")+" "+dimStyle.Render("check versions"))
+		if m.width >= 96 {
+			parts = append(parts, accentStyle.Render("r")+" "+dimStyle.Render("check versions"))
+		}
 	}
 	parts = append(parts, accentStyle.Render("q")+" "+dimStyle.Render("quit"))
-	return "  " + strings.Join(parts, dimStyle.Render("  ·  "))
+	lines := wrapStyledParts(parts, dimStyle.Render("  ·  "), max(12, m.width-2))
+	for i := range lines {
+		lines[i] = "  " + lines[i]
+	}
+	return strings.Join(lines, "\n")
 }
 
 func padRight(s string, width int) string {
@@ -291,8 +375,81 @@ func truncate(s string, width int) string {
 	return out + "…"
 }
 
+func wrapStyledParts(parts []string, sep string, width int) []string {
+	if width <= 0 {
+		return []string{""}
+	}
+	var lines []string
+	current := ""
+	for _, part := range parts {
+		candidate := part
+		if current != "" {
+			candidate = current + sep + part
+		}
+		if current != "" && lipgloss.Width(candidate) > width {
+			lines = append(lines, current)
+			current = part
+			continue
+		}
+		current = candidate
+	}
+	if current != "" {
+		lines = append(lines, current)
+	}
+	if len(lines) == 0 {
+		return []string{""}
+	}
+	return lines
+}
+
+func wrapText(s string, width int) []string {
+	if width <= 0 {
+		return []string{""}
+	}
+	words := strings.Fields(s)
+	if len(words) == 0 {
+		return []string{""}
+	}
+
+	lines := []string{}
+	current := ""
+	for _, word := range words {
+		if current == "" {
+			if lipgloss.Width(word) <= width {
+				current = word
+			} else {
+				lines = append(lines, truncate(word, width))
+			}
+			continue
+		}
+		candidate := current + " " + word
+		if lipgloss.Width(candidate) > width {
+			lines = append(lines, current)
+			if lipgloss.Width(word) <= width {
+				current = word
+			} else {
+				lines = append(lines, truncate(word, width))
+				current = ""
+			}
+			continue
+		}
+		current = candidate
+	}
+	if current != "" {
+		lines = append(lines, current)
+	}
+	return lines
+}
+
 func max(a, b int) int {
 	if a > b {
+		return a
+	}
+	return b
+}
+
+func min(a, b int) int {
+	if a < b {
 		return a
 	}
 	return b

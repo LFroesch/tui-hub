@@ -25,6 +25,39 @@ type suiteApp struct {
 	UpdateAvailable bool
 }
 
+func (a suiteApp) statusLabel() string {
+	if a.UpdateAvailable {
+		return "update -> " + a.LatestVersion
+	}
+	if a.Installed {
+		return "installed"
+	}
+	return "available"
+}
+
+func (a suiteApp) detailSummary() string {
+	parts := []string{a.statusLabel()}
+	if a.LocalVersion != "" {
+		parts = append(parts, "local "+a.LocalVersion)
+	}
+	if a.LatestVersion != "" && a.LatestVersion != a.LocalVersion {
+		parts = append(parts, "latest "+a.LatestVersion)
+	}
+	return strings.Join(parts, "  ·  ")
+}
+
+func (a suiteApp) DescriptionWithMeta() string {
+	desc := strings.TrimSpace(a.Description)
+	meta := a.statusLabel()
+	if a.LocalVersion != "" {
+		meta += " · " + a.LocalVersion
+	}
+	if desc == "" {
+		return meta
+	}
+	return desc + " [" + meta + "]"
+}
+
 type model struct {
 	version    string
 	cfg        config
@@ -381,7 +414,7 @@ func (m model) visibleRowCount() int {
 	if m.height <= 0 {
 		return 8
 	}
-	rows := m.height - 9
+	rows := m.height - 9 - m.helpLineCount() - m.detailPanelFootprint()
 	if rows < 4 {
 		rows = 4
 	}
@@ -389,6 +422,68 @@ func (m model) visibleRowCount() int {
 		rows = 14
 	}
 	return rows
+}
+
+func (m model) useCompactLayout() bool {
+	return m.width > 0 && m.width < 96
+}
+
+func (m model) detailDescriptionLines() int {
+	if m.useCompactLayout() {
+		return 3
+	}
+	return 2
+}
+
+func (m model) detailPanelFootprint() int {
+	if _, ok := m.selectedApp(); !ok {
+		return 0
+	}
+	return 5 + m.detailDescriptionLines()
+}
+
+func (m model) helpLineCount() int {
+	if m.width <= 0 {
+		return 1
+	}
+	parts := []string{"j/k move", "ctrl+u/d page", "g/G top/bottom"}
+	if !m.demo {
+		parts = append(parts, "tab/1/2 switch")
+	}
+	if m.page == pageInstalled {
+		parts = append(parts, "enter launch")
+		if !m.demo {
+			parts = append(parts, "u update")
+		}
+	} else if !m.demo {
+		parts = append(parts, "i install")
+	}
+	if !m.demo {
+		parts = append(parts, "r check versions")
+	}
+	parts = append(parts, "q quit")
+
+	width := max(12, m.width-2)
+	lines := 1
+	current := 0
+	for i, part := range parts {
+		partWidth := len(part)
+		if current == 0 {
+			current = partWidth
+			continue
+		}
+		sepWidth := len("  ·  ")
+		if current+sepWidth+partWidth > width {
+			lines++
+			current = partWidth
+			continue
+		}
+		current += sepWidth + partWidth
+		if i == len(parts)-1 {
+			continue
+		}
+	}
+	return lines
 }
 
 func (m model) visibleApps() []suiteApp {

@@ -3,8 +3,11 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 func TestExtractVersion(t *testing.T) {
@@ -91,6 +94,98 @@ func TestRefreshAppsIncludesBuiltInCatalog(t *testing.T) {
 	apps := refreshApps("test")
 	if got, want := len(apps), len(builtInCatalog()); got != want {
 		t.Fatalf("refreshApps count = %d, want %d", got, want)
+	}
+}
+
+func TestBuiltInCatalogProblemIconsStaySingleWidth(t *testing.T) {
+	for _, app := range builtInCatalog() {
+		if app.ID != "runx" && app.ID != "bobdb" {
+			continue
+		}
+		if got := lipgloss.Width(app.Icon); got != 2 {
+			t.Fatalf("%s icon width = %d, want 2", app.ID, got)
+		}
+	}
+}
+
+func TestRenderHelpWrapsOnSmallWidth(t *testing.T) {
+	m := initialModel("dev")
+	m.width = 48
+	m.page = pageInstalled
+
+	got := m.renderHelp()
+	if !strings.Contains(got, "\n") {
+		t.Fatalf("expected wrapped help text for narrow terminal, got %q", got)
+	}
+}
+
+func TestRenderTableUsesCompactLayoutOnSmallWidth(t *testing.T) {
+	m := model{
+		width:  72,
+		height: 24,
+		page:   pageAvailable,
+		selected: map[string]int{
+			pageInstalled: 0,
+			pageAvailable: 0,
+		},
+		scroll: map[string]int{
+			pageInstalled: 0,
+			pageAvailable: 0,
+		},
+		apps: []suiteApp{
+			{
+				appCatalogEntry: appCatalogEntry{
+					ID:          "runx",
+					Name:        "runx",
+					Description: "Saved script runner with schedules, prompts, and live output.",
+					Icon:        "📜",
+					Color:       "117",
+				},
+			},
+		},
+	}
+
+	got := m.renderTable()
+	if strings.Contains(got, "Version") || strings.Contains(got, "Status") {
+		t.Fatalf("expected compact layout without version/status headers, got %q", got)
+	}
+}
+
+func TestRenderDetailsIncludesFullDescription(t *testing.T) {
+	m := model{
+		width:  80,
+		height: 24,
+		page:   pageAvailable,
+		selected: map[string]int{
+			pageInstalled: 0,
+			pageAvailable: 0,
+		},
+		scroll: map[string]int{
+			pageInstalled: 0,
+			pageAvailable: 0,
+		},
+		apps: []suiteApp{
+			{
+				appCatalogEntry: appCatalogEntry{
+					ID:          "runx",
+					Name:        "runx",
+					Repo:        "LFroesch/runx",
+					Description: "Saved script runner with schedules, prompts, and live output.",
+					Icon:        "📜",
+					Color:       "117",
+				},
+			},
+		},
+	}
+
+	got := m.renderDetails()
+	for _, want := range []string{
+		"Saved script runner with schedules, prompts, and live output.",
+		"repo LFroesch/runx",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected details panel to include %q, got %q", want, got)
+		}
 	}
 }
 
