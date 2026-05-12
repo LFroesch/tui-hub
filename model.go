@@ -555,7 +555,7 @@ func saveConfigCmd(cfg config) tea.Cmd {
 func launchAppCmd(app suiteApp) tea.Cmd {
 	args := demoLaunchArgs(app.ID)
 	cmd := exec.Command(app.ResolvedPath, args...)
-	cmd.Env = withDemoEnv(os.Environ())
+	cmd.Env = withDemoAppEnv(os.Environ(), app.ID)
 	if dir := demoWorkingDir(app.ID); dir != "" {
 		cmd.Dir = dir
 	}

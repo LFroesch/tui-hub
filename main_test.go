@@ -324,6 +324,27 @@ func TestWithDemoEnvAddsFlags(t *testing.T) {
 	}
 }
 
+func TestWithDemoAppEnvIsolatesHome(t *testing.T) {
+	t.Setenv("DEMO_ENV", "1")
+	root := filepath.Join(t.TempDir(), "demo-home")
+	t.Setenv("TUI_HUB_DEMO_HOME", root)
+
+	env := withDemoAppEnv([]string{"PATH=" + os.Getenv("PATH")}, "unrot")
+	wantHome := filepath.Join(root, "unrot")
+	for _, want := range []string{
+		"HOME=" + wantHome,
+		"XDG_DATA_HOME=" + filepath.Join(wantHome, ".local", "share"),
+		"XDG_CONFIG_HOME=" + filepath.Join(wantHome, ".config"),
+	} {
+		if !containsLine(env, want) {
+			t.Fatalf("expected env to include %q", want)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(wantHome, ".local", "share")); err != nil {
+		t.Fatalf("expected data dir to exist: %v", err)
+	}
+}
+
 func TestDemoLaunchArgsScoutUsesRootBoundary(t *testing.T) {
 	t.Setenv("TUI_HUB_DEMO", "1")
 	root := filepath.Join(t.TempDir(), "seed-data")

@@ -29,6 +29,38 @@ func withDemoEnv(env []string) []string {
 	)
 }
 
+func demoHomeRoot() string {
+	if root := os.Getenv("TUI_HUB_DEMO_HOME"); root != "" {
+		return root
+	}
+	return filepath.Join(os.TempDir(), "tui-hub-demo-home")
+}
+
+func demoHomeDir(appID string) string {
+	if !isDemoMode() {
+		return ""
+	}
+	if appID == "" {
+		return demoHomeRoot()
+	}
+	return filepath.Join(demoHomeRoot(), appID)
+}
+
+func withDemoAppEnv(env []string, appID string) []string {
+	env = withDemoEnv(env)
+	home := demoHomeDir(appID)
+	if home == "" {
+		return env
+	}
+	_ = os.MkdirAll(filepath.Join(home, ".local", "share"), 0o755)
+	_ = os.MkdirAll(filepath.Join(home, ".config"), 0o755)
+	return append(env,
+		"HOME="+home,
+		"XDG_DATA_HOME="+filepath.Join(home, ".local", "share"),
+		"XDG_CONFIG_HOME="+filepath.Join(home, ".config"),
+	)
+}
+
 func demoWorkingDir(appID string) string {
 	if !isDemoMode() {
 		return ""
