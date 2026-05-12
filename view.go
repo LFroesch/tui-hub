@@ -59,10 +59,11 @@ func (m model) View() string {
 	sep := dimStyle.Render(strings.Repeat("─", max(20, m.width)))
 	content := m.renderContent()
 	footer := m.renderHelp()
-	parts := []string{header, sep, content, sep, footer}
+	parts := []string{header, sep, content}
 	if status := m.renderStatus(); status != "" {
 		parts = append(parts, status)
 	}
+	parts = append(parts, sep, footer)
 	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }
 
