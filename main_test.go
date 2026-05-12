@@ -240,7 +240,7 @@ func TestNormalizeConfigRoundTripAppState(t *testing.T) {
 	}
 }
 
-func TestSortAppsInstalledUsesFrecency(t *testing.T) {
+func TestSortAppsInstalledUsesAlphabeticalOrder(t *testing.T) {
 	now := time.Now().UTC()
 	apps := []suiteApp{
 		{appCatalogEntry: appCatalogEntry{ID: "runx", Name: "runx"}, Installed: true},
@@ -260,7 +260,7 @@ func TestSortAppsInstalledUsesFrecency(t *testing.T) {
 
 	sortApps(apps, cfg)
 
-	if apps[0].ID != "scout" || apps[1].ID != "bobdb" || apps[2].ID != "runx" {
+	if apps[0].ID != "bobdb" || apps[1].ID != "runx" || apps[2].ID != "scout" {
 		t.Fatalf("installed order = %q, %q, %q", apps[0].ID, apps[1].ID, apps[2].ID)
 	}
 	if apps[3].ID != "dwight" || apps[4].ID != "zap" {

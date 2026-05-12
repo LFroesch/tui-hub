@@ -32,7 +32,7 @@ tui-hub --version
 
 | Page | Purpose |
 |------|---------|
-| Installed | Launch apps already on your `PATH`, sorted by frecency |
+| Installed | Launch apps already on your `PATH`, sorted alphabetically |
 | Available | Browse curated suite apps that are not installed yet |
 
 Install and update actions call each app's own `install.sh` release installer.
@@ -78,7 +78,7 @@ It only keeps user state:
 
 - last active page
 - per-app launch count
-- last-launched timestamps used for frecency sorting
+- per-app launch history metadata
 
 The catalog itself is built into the app.
 

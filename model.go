@@ -574,46 +574,8 @@ func sortApps(apps []suiteApp, cfg config) {
 		if apps[i].Installed != apps[j].Installed {
 			return apps[i].Installed
 		}
-		if apps[i].Installed {
-			left := frecencyScore(cfg.AppState[apps[i].ID])
-			right := frecencyScore(cfg.AppState[apps[j].ID])
-			if left != right {
-				return left > right
-			}
-			leftTime := lastLaunchedAt(cfg.AppState[apps[i].ID])
-			rightTime := lastLaunchedAt(cfg.AppState[apps[j].ID])
-			if !leftTime.Equal(rightTime) {
-				return leftTime.After(rightTime)
-			}
-		}
 		return strings.ToLower(apps[i].Name) < strings.ToLower(apps[j].Name)
 	})
-}
-
-func frecencyScore(state appState) float64 {
-	if state.LaunchCount <= 0 {
-		return 0
-	}
-	last := lastLaunchedAt(state)
-	if last.IsZero() {
-		return float64(state.LaunchCount)
-	}
-	days := time.Since(last).Hours() / 24
-	if days < 0 {
-		days = 0
-	}
-	return float64(state.LaunchCount) + 1/(1+days)
-}
-
-func lastLaunchedAt(state appState) time.Time {
-	if state.LastLaunched == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC3339, state.LastLaunched)
-	if err != nil {
-		return time.Time{}
-	}
-	return t
 }
 
 func (m *model) recordLaunch(appID string, when time.Time) (suiteApp, bool) {
