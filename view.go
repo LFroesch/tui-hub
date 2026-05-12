@@ -280,7 +280,7 @@ func (m model) renderStatus() string {
 		return warnStyle.Render("  " + m.status)
 	}
 	if m.demo {
-		return dimStyle.Render("  Public demo: sandboxed session, fresh workspace every run, limited integrations.")
+		return dimStyle.Render("  Public demo: sandboxed session, fresh workspace every run, limited integrations. Every app here also runs standalone outside the launcher.")
 	}
 	return ""
 }
@@ -340,6 +340,9 @@ func (m model) renderHelp() string {
 	}
 	parts = append(parts, accentStyle.Render("q")+" "+dimStyle.Render("quit"))
 	lines := wrapStyledParts(parts, dimStyle.Render("  ·  "), max(12, m.width-2))
+	if m.demo {
+		lines = append(lines, dimStyle.Render("apps also available standalone: run them directly from the shell"))
+	}
 	for i := range lines {
 		lines[i] = "  " + lines[i]
 	}

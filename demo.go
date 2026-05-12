@@ -5,6 +5,13 @@ import (
 	"path/filepath"
 )
 
+func demoSeedRoot() string {
+	if root := os.Getenv("TUI_HUB_DEMO_ROOT"); root != "" {
+		return root
+	}
+	return filepath.Join("/home/demo", "seed-data")
+}
+
 func isDemoMode() bool {
 	return os.Getenv("TUI_HUB_DEMO") == "1" ||
 		os.Getenv("DEMO_ENV") == "1" ||
@@ -26,7 +33,7 @@ func demoWorkingDir(appID string) string {
 	if !isDemoMode() {
 		return ""
 	}
-	dir := filepath.Join("/home/demo", "seed-data", appID)
+	dir := filepath.Join(demoSeedRoot(), appID)
 	if info, err := os.Stat(dir); err == nil && info.IsDir() {
 		return dir
 	}

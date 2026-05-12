@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -325,6 +326,11 @@ func TestWithDemoEnvAddsFlags(t *testing.T) {
 
 func TestDemoLaunchArgsScoutUsesRootBoundary(t *testing.T) {
 	t.Setenv("TUI_HUB_DEMO", "1")
+	root := filepath.Join(t.TempDir(), "seed-data")
+	t.Setenv("TUI_HUB_DEMO_ROOT", root)
+	if err := os.MkdirAll(filepath.Join(root, "scout"), 0o755); err != nil {
+		t.Fatalf("mkdir demo root: %v", err)
+	}
 	got := demoLaunchArgs("scout")
 	if len(got) != 2 {
 		t.Fatalf("expected 2 args, got %d: %v", len(got), got)
@@ -332,7 +338,7 @@ func TestDemoLaunchArgsScoutUsesRootBoundary(t *testing.T) {
 	if got[0] != "--root" {
 		t.Fatalf("expected first arg to be --root, got %q", got[0])
 	}
-	if got[1] != "/home/demo/seed-data/scout" {
+	if got[1] != filepath.Join(root, "scout") {
 		t.Fatalf("expected scout demo root, got %q", got[1])
 	}
 }
