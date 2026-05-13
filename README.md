@@ -8,19 +8,14 @@ Launcher for the `tui-suite` app collection. `tui-hub` keeps the default view fo
 
 ## Install
 
-Supported platforms: Linux, macOS, and Windows.
+Supported platforms: Linux and macOS.
+
+Windows release binaries and installer entrypoints are shipped, but native Windows support is unverified.
 
 Recommended:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/LFroesch/tui-hub/main/install.sh | bash
-```
-
-Other options:
-
-```bash
-go install github.com/LFroesch/tui-hub@latest
-make install
 ```
 
 Windows:
@@ -31,6 +26,13 @@ Windows:
 
 ```bat
 install.cmd
+```
+
+Other options:
+
+```bash
+go install github.com/LFroesch/tui-hub@latest
+make install
 ```
 
 Run:
