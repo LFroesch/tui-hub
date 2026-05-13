@@ -74,6 +74,14 @@ func TestNormalizeVersion(t *testing.T) {
 	}
 }
 
+func TestInstallScriptURLUsesReleaseTag(t *testing.T) {
+	got := installScriptURL("LFroesch/runx", "v1.2.3")
+	want := "https://raw.githubusercontent.com/LFroesch/runx/v1.2.3/install.sh"
+	if got != want {
+		t.Fatalf("installScriptURL() = %q, want %q", got, want)
+	}
+}
+
 func TestAppsForPage(t *testing.T) {
 	m := model{
 		apps: []suiteApp{

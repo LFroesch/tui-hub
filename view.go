@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/LFroesch/tui-suite/suitechrome"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -68,36 +69,25 @@ func (m model) View() string {
 }
 
 func (m model) renderHeader() string {
-	title := titleStyle.Render("tui-hub") + " " + dimStyle.Render(m.version)
+	title := suitechrome.RenderTitle("tui-hub", m.version)
 	if m.demo {
 		title += " " + warnStyle.Render("[DEMO]")
 	}
-	tabs := m.renderTabs()
+	tabs := suitechrome.RenderTabs(m.headerTabs())
 	right := dimStyle.Render(fmt.Sprintf("%d apps", len(m.visibleApps())))
-
-	line := title + "  " + tabs
-	gap := m.width - lipgloss.Width(line) - lipgloss.Width(right)
-	if gap < 2 {
-		return line
-	}
-	return line + strings.Repeat(" ", gap) + right
+	return suitechrome.JoinHeader(m.width, title+"  "+tabs, right)
 }
 
-func (m model) renderTabs() string {
+func (m model) headerTabs() []suitechrome.Tab {
 	if m.demo {
-		return activeTabStyle.Render(fmt.Sprintf("Installed (%d)", len(m.appsForPage(pageInstalled))))
+		return []suitechrome.Tab{{Label: fmt.Sprintf("Installed (%d)", len(m.appsForPage(pageInstalled))), Active: true}}
 	}
 	installedLabel := fmt.Sprintf("1 Installed (%d)", len(m.appsForPage(pageInstalled)))
 	availableLabel := fmt.Sprintf("2 Available (%d)", len(m.appsForPage(pageAvailable)))
-
-	installed := tabStyle.Render(installedLabel)
-	available := tabStyle.Render(availableLabel)
-	if m.page == pageInstalled {
-		installed = activeTabStyle.Render(installedLabel)
-	} else {
-		available = activeTabStyle.Render(availableLabel)
+	return []suitechrome.Tab{
+		{Label: installedLabel, Active: m.page == pageInstalled},
+		{Label: availableLabel, Active: m.page == pageAvailable},
 	}
-	return installed + dimStyle.Render("  │  ") + available
 }
 
 func (m model) renderContent() string {

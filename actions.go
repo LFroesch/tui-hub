@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"regexp"
 	"strings"
 	"time"
@@ -86,8 +88,28 @@ func checkVersionsCmd(apps []suiteApp) tea.Cmd {
 
 func installOrUpdateCmd(app suiteApp, cfg config) tea.Cmd {
 	return func() tea.Msg {
-		cmd := exec.Command("sh", "-c", fmt.Sprintf("curl -fsSL https://raw.githubusercontent.com/%s/main/install.sh | bash", app.Repo))
-		cmd.Env = os.Environ()
+		client := &http.Client{Timeout: 15 * time.Second}
+		version, err := fetchLatestRelease(client, app.Repo)
+		if err != nil {
+			return installFinishedMsg{
+				appID: app.ID,
+				apps:  refreshAppsWithConfig(cfg),
+				err:   fmt.Errorf("%s install failed: resolve latest release: %w", app.Name, err),
+			}
+		}
+
+		script, err := fetchInstallScript(client, app.Repo, version)
+		if err != nil {
+			return installFinishedMsg{
+				appID: app.ID,
+				apps:  refreshAppsWithConfig(cfg),
+				err:   fmt.Errorf("%s install failed: fetch installer for %s: %w", app.Name, version, err),
+			}
+		}
+
+		cmd := installCommand()
+		cmd.Env = append(os.Environ(), "VERSION="+version)
+		cmd.Stdin = strings.NewReader(script)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			msg := strings.TrimSpace(string(out))
 			if msg == "" {
@@ -111,6 +133,38 @@ func installOrUpdateCmd(app suiteApp, cfg config) tea.Cmd {
 			status: action + app.Name + ".",
 		}
 	}
+}
+
+func fetchInstallScript(client *http.Client, repo, version string) (string, error) {
+	req, err := http.NewRequest(http.MethodGet, installScriptURL(repo, version), nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "tui-hub")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("github returned %s", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
+func installScriptURL(repo, version string) string {
+	name := "install.sh"
+	if runtime.GOOS == "windows" {
+		name = "install.ps1"
+	}
+	return fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s", repo, version, name)
 }
 
 func fetchLatestRelease(client *http.Client, repo string) (string, error) {
@@ -153,4 +207,14 @@ func shouldOfferUpdate(localVersion, latestVersion string) bool {
 func normalizeVersion(v string) string {
 	normalized := strings.TrimPrefix(strings.TrimSpace(v), "v")
 	return strings.TrimSuffix(normalized, "-dirty")
+}
+
+func installCommand() *exec.Cmd {
+	if runtime.GOOS == "windows" {
+		if path, err := exec.LookPath("pwsh"); err == nil {
+			return exec.Command(path, "-NoLogo", "-NoProfile", "-Command", "-")
+		}
+		return exec.Command("powershell", "-NoLogo", "-NoProfile", "-Command", "-")
+	}
+	return exec.Command("bash")
 }

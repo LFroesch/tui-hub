@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -522,6 +523,9 @@ func refreshApps(status string) []suiteApp {
 func refreshAppsWithConfig(cfg config) []suiteApp {
 	apps := make([]suiteApp, 0, len(builtInCatalog()))
 	for _, entry := range builtInCatalog() {
+		if runtime.GOOS == "windows" && !entry.Windows {
+			continue
+		}
 		app := suiteApp{appCatalogEntry: entry}
 		if path, err := exec.LookPath(entry.Binary); err == nil {
 			app.Installed = true
