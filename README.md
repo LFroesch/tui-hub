@@ -6,19 +6,29 @@ Launcher for the `tui-suite` app collection. `tui-hub` keeps the default view fo
 
 **Live demo:** [froesch.dev](https://froesch.dev)
 
+## Release Status
+
+Developed for WSL2/Linux first. Cross-platform testing and bug fixing for macOS and native Windows are still in progress.
+
+Linux, WSL2, and macOS are the primary targets today. Windows binaries and installer entrypoints are available, but native Windows should still be treated as experimental.
+
 ## Install
 
-Supported platforms: Linux and macOS.
-
-Windows release binaries and installer entrypoints are shipped, but native Windows support is unverified.
-
-Recommended:
+Quick install:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/LFroesch/tui-hub/main/install.sh | bash
 ```
 
-Windows:
+Experimental native Windows install:
+
+```powershell
+irm https://raw.githubusercontent.com/LFroesch/tui-hub/main/install.ps1 | iex
+```
+
+Direct installers: [`install.sh`](https://raw.githubusercontent.com/LFroesch/tui-hub/main/install.sh), [`install.ps1`](https://raw.githubusercontent.com/LFroesch/tui-hub/main/install.ps1)
+
+If you cloned the repo already:
 
 ```powershell
 ./install.ps1
@@ -67,8 +77,6 @@ Install and update actions call each app's own `install.sh` release installer.
 | [stickies](https://github.com/LFroesch/stickies) | Quick notes and daily journaling with a small pipe-friendly CLI. | Yes |
 | [unrot](https://github.com/LFroesch/unrot) | Knowledge review and spaced-repetition study app for your own notes. | Yes |
 | [zap](https://github.com/LFroesch/zap) | Personal file registry for fast preview, reopen, and editing. | Yes |
-
-`chunes` is out of the current `tui-hub` v1 scope.
 
 ## Controls
 
